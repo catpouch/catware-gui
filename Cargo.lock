@@ -556,6 +556,8 @@ name = "catware-gui"
 version = "0.1.0"
 dependencies = [
  "eframe",
+ "egui_plot",
+ "evalexpr",
 ]
 
 [[package]]
@@ -932,6 +934,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "egui_plot"
+version = "0.29.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d8dca4871c15d51aadb79534dcf51a8189e5de3426ee7b465eb7db9a0a81ea67"
+dependencies = [
+ "ahash",
+ "egui",
+ "emath",
+]
+
+[[package]]
 name = "emath"
 version = "0.29.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1011,6 +1024,12 @@ name = "error-code"
 version = "3.3.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a5d9305ccc6942a704f4335694ecd3de2ea531b114ac2d51f5f843750787a92f"
+
+[[package]]
+name = "evalexpr"
+version = "12.0.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a34d6a32086a56f60134157499b9f397ba3a278f06b59241d17df7b90849e69c"
 
 [[package]]
 name = "event-listener"
