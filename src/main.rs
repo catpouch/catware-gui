@@ -1,7 +1,10 @@
-use eframe::egui::{self, text::{CCursor, CCursorRange}};
+use eframe::egui::{self, text::{CCursor, CCursorRange}, Color32};
 use egui::Key;
 use evalexpr::*;
 use std::collections::HashMap;
+use crate::parser::CatwareCalc;
+
+pub mod parser;
 // use egui_plot::{Line, Plot, PlotPoints};
 
 // const PLOT_RESOLUTION: usize = 100;
@@ -9,7 +12,7 @@ use std::collections::HashMap;
 // please ignore all of the commented code, it was extremely rough and i know i have to find a different solution
 fn main() -> eframe::Result {
     let native_options = eframe::NativeOptions::default();
-    eframe::run_native("CATware v0.1", native_options, Box::new(|_cc| Ok(Box::new(CatwareApp::default()))))
+    eframe::run_native("CATware v0.1", native_options, Box::new(|cc| Ok(Box::new(CatwareApp::new(cc)))))
 }
 
 struct CatwareApp {
@@ -18,10 +21,15 @@ struct CatwareApp {
     history_index: usize,
     // points: Vec<[f64; 2]>,
     context: HashMapContext,
+    // parser: CatwareCalc,
 }
 
-impl Default for CatwareApp {
-    fn default() -> Self {
+impl CatwareApp {
+    fn new(cc: &eframe::CreationContext<'_>) -> Self {
+        cc.egui_ctx.style_mut(|style| {
+            style.visuals.extreme_bg_color = style.visuals.faint_bg_color;
+        });
+
         Self {
             input: "glorp".to_owned(),
             history: vec![],
@@ -92,7 +100,8 @@ impl Default for CatwareApp {
                 //     }
                 // })).unwrap();
                 temp_context
-            }
+            },
+            // parser: CatwareCalc::new()
         }
     }
 }
@@ -114,8 +123,8 @@ impl eframe::App for CatwareApp {
             }).fold(String::new(), |a,b| a + &b));
             // ui.label(self.history_index.to_string());
             ui.horizontal(|ui| {
-                ui.label("> ");
-                let input_box_widget = egui::TextEdit::singleline(&mut self.input);
+                ui.label(">");
+                let input_box_widget = egui::TextEdit::singleline(&mut self.input).frame(false);
                 let mut input_box= input_box_widget.show(ui);
                 if input_box.response.changed() && self.history_index != usize::MAX {
                     self.history[self.history_index].0 = self.input.clone();
@@ -127,6 +136,7 @@ impl eframe::App for CatwareApp {
                             self.history.truncate(self.history_index);
                         }
                         let result = eval_with_context_mut(&self.input, &mut self.context);
+                        // let result = self.parser.parse_string(&self.input).unwrap();
 
                         // this is the worst code i have ever written
                         // if result.unwrap().is_tuple() 

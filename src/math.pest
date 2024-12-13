@@ -1,0 +1,23 @@
+WHITESPACE = _{ " " | "\t" | NEWLINE }
+
+program = { SOI ~ ( assignment | expr ) ~ EOI }
+  assignment = { ( func_def | id ) ~ eq ~ expr }
+  expr = { prefix? ~ primary ~ postfix? ~ (infix ~ prefix? ~ primary ~ postfix? )* }
+    infix = _{ add | sub | mul | div | pow | eq }
+      add = { "+" }
+      sub = { "-" }
+      mul = { "*" }
+      div = { "/" }
+      pow = { "^" }
+      eq = { "=" }
+    prefix = _{ neg }
+      neg = { "-" }
+    postfix = _{ fac }
+      fac = { "!" }
+    primary = _{ num | func | id }
+      num = @{ ASCII_DIGIT+ ~ ("." ~ ASCII_DIGIT*)? | "." ~ ASCII_DIGIT+ }
+      id = @{ ASCII_ALPHA ~ ( ASCII_ALPHA | ASCII_DIGIT | "_" )* }
+      func = { id ~ "(" ~ args ~ ")" | "(" ~ expr ~ ")" } // function usage
+      func_def = { id ~ "(" ~ sig ~ ")" } // function definition
+      args = { ( expr ~ ( "," ~ expr )* )? }
+      sig = { ( id ~ ( "," ~ id )* ) } // function signature
