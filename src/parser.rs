@@ -4,13 +4,16 @@ use std::collections::HashMap;
 use pest::{iterators::{Pair, Pairs}, pratt_parser::{Assoc, Op, PrattParser}, Parser};
 use pest_derive::Parser;
 
+// CatwareParser does the conversion from text to pairs (pest's way of breaking up text)
 #[derive(Parser)]
 #[grammar="math.pest"]
 struct CatwareParser;
 
+// struct for user-defined functions
+// i'm aware that reparsing the function every time is definitely not very fast, it will be changed in the future
 struct CatwareFunc {
-    signature: Vec<String>,
-    definition: String
+    signature: Vec<String>, // argument names in order
+    definition: String // function body
 }
 
 impl CatwareFunc {
@@ -22,6 +25,7 @@ impl CatwareFunc {
     }
 }
 
+// for pretty printing
 impl std::fmt::Debug for CatwareFunc {
     fn fmt(&self, fmt: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         fmt.debug_struct("CatwareFunc")
@@ -31,17 +35,19 @@ impl std::fmt::Debug for CatwareFunc {
     }
 }
 
+// struct that takes in a string and outputs a float. will be changed to include actual error handling in the future
 pub struct CatwareCalc {
-    pratt: PrattParser<Rule>,
-    vars_context: HashMap<String, f64>,
-    hardcoded_vars: HashMap<&'static str, f64>,
-    funcs_context: HashMap<String, CatwareFunc>,
-    hardcoded_funcs: [&'static str; 18]
+    pratt: PrattParser<Rule>, // this is a pest struct. takes in pairs and runs code with them with operator precedence
+    vars_context: HashMap<String, f64>, // contains user-defined and hardcoded values
+    hardcoded_vars: [&'static str; 3], // list of names of hardcoded values to prevent user from overwriting them
+    funcs_context: HashMap<String, CatwareFunc>, // contains user-defined functions
+    hardcoded_funcs: [&'static str; 18] // list of names of hardcoded functions to prevent user from defining an existing function twice
 }
 
 impl CatwareCalc {
     pub fn new() -> Self {
         Self {
+            // operator precendence defined by order they are applied (last ones applied will be of higher precendence)
             pratt: {
                 PrattParser::new()
                 .op(Op::infix(Rule::add, Assoc::Left) | Op::infix(Rule::sub, Assoc::Right))
@@ -51,14 +57,14 @@ impl CatwareCalc {
                 .op(Op::prefix(Rule::neg))
                 .op(Op::infix(Rule::eq, Assoc::Left))
             },
-            vars_context: HashMap::new(),
-            hardcoded_vars: HashMap::from([
-                ("pi", f64::consts::PI),
-                ("tau", f64::consts::TAU),
-                ("e", f64::consts::E)
+            vars_context: HashMap::from([
+                ("pi".to_owned(), f64::consts::PI),
+                ("tau".to_owned(), f64::consts::TAU),
+                ("e".to_owned(), f64::consts::E)
             ]),
+            hardcoded_vars: ["pi", "tau", "e"],
             funcs_context: HashMap::new(),
-            // i am aware this is awful
+            // i am aware this is kind of awful
             hardcoded_funcs: ["ln", "log2", "log10", "sin", "asin", "sinh", "asinh", "cos", "acos", "cosh", "acosh", "tan", "atan", "tanh", "atanh", "sqrt", "cbrt", "abs"]
         }
     }
@@ -114,10 +120,13 @@ impl CatwareCalc {
         let lhs = mut_pairs.next().unwrap();
         if lhs.as_rule() == Rule::id {
             let val = mut_pairs.skip(1).next().unwrap().into_inner();
+            if self.hardcoded_vars.contains(&lhs.as_str()) {return}
             self.vars_context.insert(lhs.as_str().to_owned(), self.parse_expr(val));
         } else {
             let mut id= lhs.into_inner();
-            self.funcs_context.insert(id.next().unwrap().as_str().to_owned(), CatwareFunc::new(id.next().unwrap().into_inner().map(|a| a.as_str().to_owned()).collect(), mut_pairs.skip(1).next().unwrap().as_str().to_owned()));
+            let name = id.next().unwrap().as_str();
+            if self.hardcoded_funcs.contains(&name) {return}
+            self.funcs_context.insert(name.to_owned(), CatwareFunc::new(id.next().unwrap().into_inner().map(|a| a.as_str().to_owned()).collect(), mut_pairs.skip(1).next().unwrap().as_str().to_owned()));
         }
     }
 
