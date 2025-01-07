@@ -101,7 +101,7 @@ impl CatwareCalc {
                             println!("{:#?}", arg_pairs);
                             let mut plot_func_ref = self.plot_func.borrow_mut();
                             *plot_func_ref = arg_pairs.as_str().to_owned();
-                            self.plot_func(&mut arg_pairs, [-10.0, 10.0]);
+                            let _ = self.plot_func(&mut arg_pairs, [-10.0, 10.0]);
                             return Err(Box::new(std::fmt::Error))
                         }
                         let args: Vec<f64> = arg_pairs.map(|a| -> Result<f64, Box<dyn std::error::Error>> {Ok(self.eval_expr_context(a.into_inner(), &context)?)}).collect::<Result<_, _>>()?;
@@ -220,11 +220,10 @@ impl CatwareCalc {
     pub fn eval_string(&mut self, input: &str) -> Result<f64, Box<dyn std::error::Error>> {
         let first_parsed = CatwareParser::parse(Rule::program, input)?.next().unwrap().into_inner().next().unwrap();
         if first_parsed.as_rule() == Rule::assignment {
-            self.handle_assignment(first_parsed.into_inner());
+            let _ = self.handle_assignment(first_parsed.into_inner());
             Err(Box::new(std::fmt::Error))
         } else {
             self.eval_expr(first_parsed.into_inner())
         }
     }
 }
-

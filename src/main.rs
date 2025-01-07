@@ -1,4 +1,4 @@
-use eframe::egui::{self, text::{CCursor, CCursorRange}, FontData, FontDefinitions};
+use eframe::egui::{self, text::{CCursor, CCursorRange}};
 use egui::Key;
 use crate::parser::CatwareCalc;
 use egui_plot::{Line, Plot, PlotPoints};
@@ -47,79 +47,131 @@ impl eframe::App for CatwareApp {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
         egui::CentralPanel::default().show(ctx, |ui| {
             if self.plot_shown {
-                let plot = Plot::new("main_plot");
+                let plot = Plot::new("main_plot")
+                    .allow_drag(false)
+                    .allow_scroll(false)
+                    .allow_boxed_zoom(false)
+                    .auto_bounds(false.into())
+                    .include_x(-10.0)
+                    .include_x(10.0)
+                    .include_y(-10.0)
+                    .include_y(10.0);
+
                 plot.show(ui, |plot_ui| {
                     plot_ui.line(Line::new(PlotPoints::new(self.parser.plot_points.borrow().to_vec())));
-                    let _ = self.parser.refresh_graph(plot_ui.plot_bounds());
+
+                    ctx.input(|i| {
+                        if i.key_down(Key::ArrowLeft) {
+                            let x_travel = (plot_ui.plot_bounds().width() * -0.03) as f32;
+                            plot_ui.translate_bounds((x_travel, 0.).into());
+                            let _ = self.parser.refresh_graph(plot_ui.plot_bounds());
+                        }
+                        if i.key_down(Key::ArrowRight) {
+                            let x_travel = (plot_ui.plot_bounds().width() * 0.03) as f32;
+                            plot_ui.translate_bounds((x_travel, 0.).into());
+                            let _ = self.parser.refresh_graph(plot_ui.plot_bounds());
+                        }
+                        if i.key_down(Key::ArrowUp) {
+                            let y_travel = (plot_ui.plot_bounds().width() * 0.03) as f32;
+                            plot_ui.translate_bounds((0., y_travel).into());
+                            let _ = self.parser.refresh_graph(plot_ui.plot_bounds());
+                        }
+                        if i.key_down(Key::ArrowDown) {
+                            let y_travel = (plot_ui.plot_bounds().width() * -0.03) as f32;
+                            plot_ui.translate_bounds((0., y_travel).into());
+                            let _ = self.parser.refresh_graph(plot_ui.plot_bounds());
+                        }
+                    });
                 });
             }
 
-            egui::ScrollArea::vertical().stick_to_bottom(true).show(ui, |ui| {
-                ui.label(self.history.iter().map(|(cmd, result)| {
-                    format!("> {0}\n{1:?}\n", cmd, result)
-                }).fold(String::new(), |a,b| a + &b));
-    
-                ui.horizontal(|ui| {
-                    ui.label(">");
-                    let input_box_widget = egui::TextEdit::singleline(&mut self.input).frame(false);
-                    let mut input_box= input_box_widget.show(ui);
-                    if input_box.response.changed() && self.history_index != usize::MAX {
-                        self.history[self.history_index].0 = self.input.clone();
-                    }
-    
-                    ctx.input(|i| {
-                        if i.key_pressed(Key::Enter) {
-                            if self.history_index != usize::MAX {
-                                self.history.truncate(self.history_index);
+            if !self.plot_shown {
+                egui::ScrollArea::vertical().stick_to_bottom(true).show(ui, |ui| {
+                    ui.label(self.history.iter().map(|(cmd, result)| {
+                        format!("> {0}\n{1}\n", cmd, match result {
+                            Ok(v) => {
+                                v.to_string()
                             }
-    
-                            // i know this is bad. i'm going insane
-                            if self.input.starts_with("plot") {
-                                self.plot_shown = true;
+                            Err(e) => {
+                                e.to_string()
                             }
-    
-                            let result = self.parser.eval_string(&self.input);
-
-                            self.history.push((self.input.clone(), result));
-    
-                            self.history_index = usize::MAX;
-    
-                            self.input.clear();
-                        }
+                        })
+                    }).fold(String::new(), |a,b| a + &b));
         
-                        if i.key_pressed(Key::ArrowUp) {
-                            if self.history_index == usize::MAX {
-                                self.history_index = self.history.len();
-                            }
-                            if self.history_index > 0 {
-                                self.history_index -= 1;
-                                self.input = self.history[self.history_index].0.clone();
-                            }
-    
-                            input_box.state.cursor.set_char_range(Some(CCursorRange::one(CCursor::new(self.input.len()))));
+                    ui.horizontal(|ui| {
+                        ui.label(">");
+                        let input_box_widget = egui::TextEdit::singleline(&mut self.input).frame(false);
+                        let mut input_box= input_box_widget.show(ui);
+                        if input_box.response.changed() && self.history_index != usize::MAX {
+                            self.history[self.history_index].0 = self.input.clone();
                         }
+    
+                        ctx.input(|i| {
+                            if i.key_pressed(Key::Enter) {
+                                if self.history_index != usize::MAX {
+                                    self.history.truncate(self.history_index);
+                                }
         
-                        if i.key_pressed(Key::ArrowDown) {
-                            if self.history_index == self.history.len() - 1 {
+                                // i know this is bad. i'm going insane
+                                if self.input.starts_with("plot") {
+                                    self.plot_shown = true;
+                                }
+        
+                                let result = self.parser.eval_string(&self.input);
+    
+                                self.history.push((self.input.clone(), result));
+        
                                 self.history_index = usize::MAX;
-                                self.input = "".to_owned();
-                            } else if self.history_index != usize::MAX {
-                                self.history_index += 1;
-                                self.input = self.history[self.history_index].0.clone();
+        
+                                self.input.clear();
                             }
-    
-                            input_box.state.cursor.set_char_range(Some(CCursorRange::one(CCursor::new(self.input.len()))));
-                        }
-    
-                        if i.key_pressed(Key::F4) {
-                            self.plot_shown = !self.plot_shown;
-                        }
+            
+                            if i.key_pressed(Key::ArrowUp) {
+                                if self.history_index == usize::MAX {
+                                    self.history_index = self.history.len();
+                                }
+                                if self.history_index > 0 {
+                                    self.history_index -= 1;
+                                    self.input = self.history[self.history_index].0.clone();
+                                }
+        
+                                input_box.state.cursor.set_char_range(Some(CCursorRange::one(CCursor::new(self.input.len()))));
+                            }
+            
+                            if i.key_pressed(Key::ArrowDown) {
+                                if self.history_index == self.history.len() - 1 {
+                                    self.history_index = usize::MAX;
+                                    self.input = "".to_owned();
+                                } else if self.history_index != usize::MAX {
+                                    self.history_index += 1;
+                                    self.input = self.history[self.history_index].0.clone();
+                                }
+        
+                                input_box.state.cursor.set_char_range(Some(CCursorRange::one(CCursor::new(self.input.len()))));
+                            }
+                        });
+        
+                        input_box.state.store(ui.ctx(), input_box.response.id);
+                        
+                        input_box.response.request_focus();
                     });
-    
-                    input_box.state.store(ui.ctx(), input_box.response.id);
-                    
-                    input_box.response.request_focus();
                 });
+            }
+
+            ctx.input(|i| {
+                if i.key_pressed(Key::F7) {
+                    self.plot_shown = !self.plot_shown;
+                }
+
+                if i.key_pressed(Key::Escape) {
+                    if self.plot_shown {
+                        self.plot_shown = false;
+                    }
+                }
+
+                if i.key_pressed(Key::F4) {
+                    self.input = "".to_owned();
+                }
             });
         });
     }
