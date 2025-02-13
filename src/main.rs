@@ -34,7 +34,7 @@ impl CatwareApp {
         });
 
         Self {
-            input: "glorp".to_owned(),
+            input: "".to_owned(),
             history: vec![],
             history_index: usize::MAX,
             parser: CatwareCalc::new(),
@@ -45,6 +45,7 @@ impl CatwareApp {
 
 impl eframe::App for CatwareApp {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
+        ctx.output_mut(|o| o.cursor_icon = egui::CursorIcon::None);
         egui::CentralPanel::default().show(ctx, |ui| {
             if self.plot_shown {
                 let plot = Plot::new("main_plot")
@@ -55,7 +56,9 @@ impl eframe::App for CatwareApp {
                     .include_x(-10.0)
                     .include_x(10.0)
                     .include_y(-10.0)
-                    .include_y(10.0);
+                    .include_y(10.0)
+                    .show_x(false)
+                    .show_y(false);
 
                 plot.show(ui, |plot_ui| {
                     plot_ui.line(Line::new(PlotPoints::new(self.parser.plot_points.borrow().to_vec())));
@@ -86,6 +89,7 @@ impl eframe::App for CatwareApp {
             }
 
             if !self.plot_shown {
+                ui.label("BATTERY % HERE");
                 egui::ScrollArea::vertical().stick_to_bottom(true).show(ui, |ui| {
                     ui.label(self.history.iter().map(|(cmd, result)| {
                         format!("> {0}\n{1}\n", cmd, match result {

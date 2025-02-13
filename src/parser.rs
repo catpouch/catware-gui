@@ -128,9 +128,13 @@ impl CatwareCalc {
                         }
                         Ok(output)
                     },
-                    // 2 => {
-                        
-                    // }
+                    2 => {
+                        let args: Vec<f64> = arg_pairs.map(|a| -> Result<f64, Box<dyn std::error::Error>> {Ok(self.eval_expr_context(a.into_inner(), &context)?)}).collect::<Result<_, _>>()?;
+                        match first.as_str() {
+                            "nrt" => Ok(args[0].powf(1.0 / args[1])),
+                            _ => Err(Box::new(std::fmt::Error))
+                        }
+                    }
                     _ => Err(Box::new(std::fmt::Error))
                 }
             }
